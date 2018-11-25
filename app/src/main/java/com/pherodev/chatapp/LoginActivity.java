@@ -5,10 +5,9 @@ import android.os.Bundle;
 import android.widget.Button;
 
 public class LoginActivity extends AppCompatActivity {
-
-
-    private Button submitNumberButton;
     
+    private Button submitNumberButton;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
