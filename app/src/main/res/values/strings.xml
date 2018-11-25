@@ -1,3 +1,27 @@
 <resources>
     <string name="app_name">ChatApp</string>
+
+    <string name="optional">(Optional)</string>
+    
+    <!--LoginActivity-->
+    <string name="login_activity_username_label">Username</string>
+    <string name="login_activity_email_label">Email</string>
+    <string name="login_activity_password_label">Password</string>
+    <string name="login_activity_first_name_label">First</string>
+    <string name="login_activity_first_name_hint">John</string>
+    <string name="login_activity_last_name_label">Last</string>
+    <string name="login_activity_last_name_hint">Snow</string>
+    <string name="login_activity_existing_account">Sign in with existing account</string>
+    <string name="login_activity_create_account">Create a new account</string>
+    <string name="login_activity_forgot_password">Forgot your password?</string>
+    <string name="login_activity_register_label">Register</string>
+    <string name="login_activity_sign_in_label">Sign In</string>
+    <string name="login_activity_sign_out_label">Sign Out</string>
+
+    <string name="login_activity_status_auth_failed">Authentication failed</string>
+    <string name="login_activity_status_signed_in">Signed In</string>
+    <string name="login_activity_status_signed_out">Signed Out</string>
+
+    <!--Demo-->
+    <string name="warning_feature_not_implemented">Under construction...</string>
 </resources>
