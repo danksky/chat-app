@@ -1,5 +1,6 @@
 package com.pherodev.chatapp.activities;
 
+import android.support.annotation.ColorInt;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.Snackbar;
@@ -14,6 +15,7 @@ import android.widget.TextView;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -86,7 +88,8 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                             usernameEditText.getText().toString(),
                             passwordEditText.getText().toString()))
                     {
-                        firebaseLogin(usernameEditText.getText().toString(),passwordEditText.getText().toString());
+                        firebaseLogin(usernameEditText.getText().toString(),
+                                passwordEditText.getText().toString());
                     }
 
                 } else {
@@ -96,7 +99,16 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                             passwordEditText.getText().toString(),
                             firstNameEditText.getText().toString(),
                             lastNameEditText.getText().toString()))
-                    {}
+                    {
+                        // TODO: Actually, first verify that username doesn't already exist.
+                        // Note: Firebase kind of already does this for email / password.
+                        // I just need to write my own preliminary check.
+                        firebaseRegisterUser(usernameEditText.getText().toString(),
+                                emailEditText.getText().toString(),
+                                passwordEditText.getText().toString(),
+                                firstNameEditText.getText().toString(),
+                                lastNameEditText.getText().toString());
+                    }
                 }
                 break;
             case R.id.text_view_login_create_account_button:
@@ -114,11 +126,13 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
             loginButton.setText(getText(R.string.login_activity_register_label));
             createAccountButton.setText(R.string.login_activity_existing_account);
             registerConstraintLayout.setVisibility(View.VISIBLE);
+            responseConstraintLayout.setVisibility(View.GONE);
         } else {
             usernameLabelTextView.setText(getText(R.string.login_activity_login_username_label));
             loginButton.setText(getText(R.string.login_activity_sign_in_label));
             createAccountButton.setText(R.string.login_activity_create_account);
             registerConstraintLayout.setVisibility(View.GONE);
+            responseConstraintLayout.setVisibility(View.GONE);
         }
     }
 
@@ -206,5 +220,69 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
 
     private void firebaseEmailLogin(String email, String password) {
         Log.d(TAG, "firebaseEmailLogin:" + email + " " + password);
+        OnCompleteListener<AuthResult> passwordLoginListener = new OnCompleteListener<AuthResult>() {
+            @Override
+            public void onComplete(@NonNull Task<AuthResult> task) {
+                updateResponseUI("firebaseEmailLogin", task);
+            }
+        };
+        firebaseAuth.signInWithEmailAndPassword(email, password).addOnCompleteListener(passwordLoginListener);
+    }
+
+    // TODO: Check that the username doesn't exist first.
+    private void firebaseRegisterUser(String username, String email, String first, String last, String passworda) {
+        OnCompleteListener<DocumentSnapshot> registerListener = new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                if (task.isSuccessful()) {
+                    if (!task.getResult().exists()) {
+                        Log.d(TAG, "fetchUsername:success (does not exist)");
+                        // TODO: proceed as "unique"
+                    } else {
+                        Log.d(TAG, "fetchUsername:failure (exists as " + task.getResult().getString("email") + ")");
+                        // TODO: Update UI
+                    }
+                } else {
+                    Log.e(TAG, "fetchUsername:" + task.getException());
+                    // TODO: Update UI (can use response below)
+                }
+            }
+        };
+        firebaseFirestore.collection("usernames").document(username).get().addOnCompleteListener(registerListener);
+    }
+
+    private void firebaseRegisterUnique(String username, String email, String first, String last, String password) {
+        OnCompleteListener<AuthResult> registerListener = new OnCompleteListener<AuthResult>() {
+            @Override
+            public void onComplete(@NonNull Task<AuthResult> task) {
+                updateResponseUI("firebaseRegister", task);
+                if (task.isSuccessful()) {
+                    // update the username document with: username > email, userId
+                    // update the users document with all person's details
+                    // update UI
+                } else {
+                    // do not proceed, obviously
+                    // update UI
+                }
+            }
+        };
+        firebaseAuth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(registerListener);
+    }
+
+    private void updateResponseUI(String methodName, @NonNull Task<AuthResult> task) {
+        if (task.isSuccessful()) {
+            Log.d(TAG, methodName + ":success");
+            responseConstraintLayout.setVisibility(View.VISIBLE);
+            responseConstraintLayout.setBackgroundTintList(getResources().getColorStateList(R.color.color_status_good));
+            responseStatusTextView.setText("User " +  task.getResult().getUser().getEmail() +
+                    " is verified: " + task.getResult().getUser().isEmailVerified());
+            responseDetailsTextView.setText(task.getResult().getUser().getUid());
+        } else {
+            Log.e(TAG, methodName + ":" + task.getException());
+            responseConstraintLayout.setVisibility(View.VISIBLE);
+            responseConstraintLayout.setBackgroundTintList(getResources().getColorStateList(R.color.color_status_bad));
+            responseStatusTextView.setText(task.getException().getMessage());
+            responseDetailsTextView.setText(null);
+        }
     }
 }
