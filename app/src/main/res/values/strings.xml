@@ -2,9 +2,11 @@
     <string name="app_name">ChatApp</string>
 
     <string name="optional">(Optional)</string>
-    
+
     <!--LoginActivity-->
-    <string name="login_activity_username_label">Username</string>
+    <string name="login_activity_login_username_label">Username or email</string>
+    <string name="login_activity_register_username_label">Username</string>
+    <string name="login_activity_username_hint">CreativeUsername909</string>
     <string name="login_activity_email_label">Email</string>
     <string name="login_activity_password_label">Password</string>
     <string name="login_activity_first_name_label">First</string>
@@ -24,4 +26,5 @@
 
     <!--Demo-->
     <string name="warning_feature_not_implemented">Under construction...</string>
+    <string name="title_activity_test_bundle">TestBundleActivity</string>
 </resources>
