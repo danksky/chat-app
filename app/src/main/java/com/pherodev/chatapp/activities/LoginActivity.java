@@ -91,7 +91,6 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                         firebaseLogin(usernameEditText.getText().toString(),
                                 passwordEditText.getText().toString());
                     }
-
                 } else {
                     if (validateRegistration(
                             usernameEditText.getText().toString(),
@@ -100,9 +99,6 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                             firstNameEditText.getText().toString(),
                             passwordEditText.getText().toString()))
                     {
-                        // TODO: Actually, first verify that username doesn't already exist.
-                        // Note: Firebase kind of already does this for email / password.
-                        // I just need to write my own preliminary check.
                         firebaseRegisterUser(usernameEditText.getText().toString(),
                                 emailEditText.getText().toString(),
                                 firstNameEditText.getText().toString(),
@@ -137,7 +133,6 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     }
 
     private boolean validateLogin(String username, String password) {
-        // TODO: Make sure that if you put in the optional first or last name, both fields are there
         boolean valid = true;
 
         if (TextUtils.isEmpty(username)) {
@@ -198,6 +193,22 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         return valid;
     }
 
+    private void updateResponseUI(boolean success, String methodName, String status, String details) {
+        if (success) {
+            Log.d(TAG, methodName + ":success (" + status + ")");
+            responseConstraintLayout.setVisibility(View.VISIBLE);
+            responseConstraintLayout.setBackgroundTintList(getResources().getColorStateList(R.color.color_status_good));
+            responseStatusTextView.setText(status);
+            responseDetailsTextView.setText(details);
+        } else {
+            Log.e(TAG, methodName + ":" + status);
+            responseConstraintLayout.setVisibility(View.VISIBLE);
+            responseConstraintLayout.setBackgroundTintList(getResources().getColorStateList(R.color.color_status_bad));
+            responseStatusTextView.setText(status);
+            responseDetailsTextView.setText(details);
+        }
+    }
+
     private void firebaseLogin(String usernameOrEmail, final String password) {
         if (usernameOrEmail.contains("@")) {
             // email
@@ -233,7 +244,6 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         firebaseAuth.signInWithEmailAndPassword(email, password).addOnCompleteListener(passwordLoginListener);
     }
 
-    // TODO: Check that the username doesn't exist first.
     private void firebaseRegisterUser(final String username, final String email, final String first, final String last, final String password) {
         OnCompleteListener<DocumentSnapshot> registerListener = new OnCompleteListener<DocumentSnapshot>() {
             @Override
@@ -275,35 +285,4 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                 .addOnCompleteListener(registerListener);
     }
 
-    private void updateResponseUI(String methodName, @NonNull Task<AuthResult> task) {
-        if (task.isSuccessful()) {
-            Log.d(TAG, methodName + ":success");
-            responseConstraintLayout.setVisibility(View.VISIBLE);
-            responseConstraintLayout.setBackgroundTintList(getResources().getColorStateList(R.color.color_status_good));
-            responseStatusTextView.setText("User " +  task.getResult().getUser().getEmail() +
-                    " is verified: " + task.getResult().getUser().isEmailVerified());
-            responseDetailsTextView.setText(task.getResult().getUser().getUid());
-        } else {
-            Log.e(TAG, methodName + ":" + task.getException());
-            responseConstraintLayout.setVisibility(View.VISIBLE);
-            responseConstraintLayout.setBackgroundTintList(getResources().getColorStateList(R.color.color_status_bad));
-            responseStatusTextView.setText(task.getException().getMessage());
-            responseDetailsTextView.setText(null);
-        }
-    }
-    private void updateResponseUI(boolean success, String methodName, String status, String details) {
-        if (success) {
-            Log.d(TAG, methodName + ":success (" + status + ")");
-            responseConstraintLayout.setVisibility(View.VISIBLE);
-            responseConstraintLayout.setBackgroundTintList(getResources().getColorStateList(R.color.color_status_good));
-            responseStatusTextView.setText(status);
-            responseDetailsTextView.setText(details);
-        } else {
-            Log.e(TAG, methodName + ":" + status);
-            responseConstraintLayout.setVisibility(View.VISIBLE);
-            responseConstraintLayout.setBackgroundTintList(getResources().getColorStateList(R.color.color_status_bad));
-            responseStatusTextView.setText(status);
-            responseDetailsTextView.setText(details);
-        }
-    }
 }
