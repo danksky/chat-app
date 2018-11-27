@@ -21,6 +21,7 @@
     <string name="login_activity_sign_out_label">Sign Out</string>
 
     <string name="login_activity_status_auth_failed">Authentication failed</string>
+    <string name="login_activity_status_welcome">Welcome</string>
     <string name="login_activity_status_signed_in">Signed In</string>
     <string name="login_activity_status_signed_out">Signed Out</string>
 

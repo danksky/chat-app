@@ -22,6 +22,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.pherodev.chatapp.R;
 import com.pherodev.chatapp.models.Person;
 
+import java.text.Format;
 import java.util.HashMap;
 
 public class LoginActivity extends AppCompatActivity implements View.OnClickListener {
@@ -246,7 +247,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
             @Override
             public void onComplete(@NonNull Task<AuthResult> task) {
                 if (task.isSuccessful()) {
-                    updateResponseUI(true, "firebaseEmailLogin", "Login success.", task.getResult().getUser().getEmail());
+                    updateResponseUI(true, "firebaseEmailLogin", "Login success.", getText(R.string.login_activity_status_welcome) + " " + task.getResult().getUser().getDisplayName());
                 } else {
                     updateResponseUI(false, "firebaseEmailLogin", "Login failed.", task.getException().getMessage());
                 }
