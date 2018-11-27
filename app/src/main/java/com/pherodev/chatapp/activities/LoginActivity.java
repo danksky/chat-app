@@ -20,6 +20,9 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.pherodev.chatapp.R;
+import com.pherodev.chatapp.models.Person;
+
+import java.util.HashMap;
 
 public class LoginActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -116,6 +119,8 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         }
     }
 
+    // TODO: Implement onStart() to check if user is already logged in or not.
+
     private void convertUI() {
         if (createAccountButton.getText().toString().equals(getText(R.string.login_activity_create_account))) {
             usernameLabelTextView.setText(getText(R.string.login_activity_register_username_label));
@@ -209,7 +214,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         }
     }
 
-    private void firebaseLogin(String usernameOrEmail, final String password) {
+    private void firebaseLogin(final String usernameOrEmail, final String password) {
         if (usernameOrEmail.contains("@")) {
             // email
             firebaseEmailLogin(usernameOrEmail, password);
@@ -219,16 +224,22 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
             @Override
             public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                 if (task.isSuccessful()) {
-                    Log.d(TAG, "fetchEmail:success");
-                    firebaseEmailLogin(task.getResult().get("email").toString(), password);
+                    if (task.getResult().exists()) {
+                        updateResponseUI(true, "fetchEmail", "Username exists.", usernameOrEmail);
+                        firebaseEmailLogin(task.getResult().get("email").toString(), password);
+                    } else {
+                        updateResponseUI(false, "fetchEmail", "Username doesn't exist.", null);
+                    }
+
                 } else {
-                    Log.e(TAG, "fetchEmail:" + task.getException());
+                    updateResponseUI(false, "fetchEmail", "Failed to read username.", task.getException().getMessage());
                 }
             }
         };
         firebaseFirestore.collection("usernames").document(usernameOrEmail).get().addOnCompleteListener(fetchEmailListener);
     }
 
+    // TODO: Populate singleton instance of logged-in user
     private void firebaseEmailLogin(String email, String password) {
         Log.d(TAG, "firebaseEmailLogin:" + email + " " + password);
         OnCompleteListener<AuthResult> passwordLoginListener = new OnCompleteListener<AuthResult>() {
@@ -264,25 +275,71 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         firebaseFirestore.collection("usernames").document(username).get().addOnCompleteListener(registerListener);
     }
 
-    private void firebaseRegisterUnique(String username, String email, String first, String last, String password) {
+    // TODO: Push new user to Firestore collectionS and populate singleton instance of logged-in user
+    private void firebaseRegisterUnique(final String username, final String email, final String first, final String last, final String password) {
         Log.d(TAG, email + " " + password);
         OnCompleteListener<AuthResult> registerListener = new OnCompleteListener<AuthResult>() {
             @Override
             public void onComplete(@NonNull Task<AuthResult> task) {
                 if (task.isSuccessful()) {
                     updateResponseUI(true, "firebaseRegister", "Successfully registered new user.", task.getResult().getUser().getEmail());
-                    // update the username document with: username > email, userId
-                    // update the users document with all person's details
-                    // update UI
+                    firestoreRegisterUser(new Person(task.getResult().getUser().getUid(), username, email, first, last));
                 } else {
-                    updateResponseUI(true, "firebaseRegister", "Registration failed.", task.getException().getMessage());
-                    // do not proceed, obviously
-                    // update UI
+                    updateResponseUI(false, "firebaseRegister", "Registration failed.", task.getException().getMessage());
                 }
             }
         };
-        firebaseAuth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener(registerListener);
+        firebaseAuth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(registerListener);
     }
 
+    private void firestoreRegisterUser(final Person registeredUser) {
+        final OnCompleteListener<Void> deletePersonListener = new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                if (task.isSuccessful()) {
+                    Log.d(TAG, "deletePerson:success");
+                } else {
+                    Log.e(TAG, "deletePerson:failure (username might still be stored)");
+                    Log.e(TAG, "deletePerson:" + task.getException().getMessage());
+                }
+            }
+        };
+        final OnCompleteListener<Void> addPersonListener = new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                if (task.isSuccessful()) {
+                    updateResponseUI(true, "addPerson", "Successfully registered Person.", registeredUser.getUsername());
+                    populateCurrentPerson(registeredUser.getUserId());
+                } else {
+                    updateResponseUI(false, "addPerson", "Failed to add Person... removing the username mapping.", task.getException().getMessage());
+                    firebaseFirestore.collection("usernames").document(registeredUser.getUsername()).delete().addOnCompleteListener(deletePersonListener);
+                }
+            }
+        };
+        final OnCompleteListener<Void> addUsernameMappingListener = new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                if (task.isSuccessful()) {
+                    updateResponseUI(true, "addUsernameMapping", "Successfully added username mapping.", registeredUser.getUsername() + " " + registeredUser.getEmail());
+                    // Then add the whole person
+                    firebaseFirestore.collection("users").document(registeredUser.getUserId()).set(registeredUser)
+                    .addOnCompleteListener(addPersonListener);
+                } else {
+                    updateResponseUI(false, "addUsernameMapping", "Failed to map username to email.", task.getException().getMessage());
+                }
+            }
+        };
+
+        HashMap<String, String> emailMap = new HashMap<>();
+        emailMap.put("email", registeredUser.getEmail());
+        emailMap.put("userId", registeredUser.getUserId());
+        // Add username mapping (which intrinsically adds Person object to Firestore)
+        firebaseFirestore.collection("usernames").document(registeredUser.getUsername()).set(emailMap)
+                .addOnCompleteListener(addUsernameMappingListener);
+    }
+
+    // TODO: Method to populate singleton instance of logged-in user
+    private void populateCurrentPerson(String uid) {
+
+    }
 }

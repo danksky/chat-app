@@ -12,6 +12,7 @@ import java.util.Date;
 public class Person implements Parcelable {
 
     public String userId;
+    public String username;
     public String name;
     public String email;
     public URL profilePictureURL;
@@ -26,6 +27,7 @@ public class Person implements Parcelable {
 
     // Bundle keys that are just the names of member variables
     private static String ID_KEY = "userId";
+    private static String USERNAME_KEY = "username";
     private static String NAME_KEY = "name";
     private static String EMAIL_KEY = "email";
     private static String PPURL_KEY = "profilePictureURL";
@@ -53,10 +55,21 @@ public class Person implements Parcelable {
         this.conversationIds = new ArrayList<>();
     }
 
+    public Person(String userId, String username, String email, String first, String last)
+    {
+        this.userId = userId;
+        this.username = username;
+        this.email = email;
+        StringBuilder sb = new StringBuilder();
+        this.name = sb.append(first).append(' ').append(last).toString();
+        this.conversationIds = new ArrayList<>();
+    }
+
     // For Parcelable
     private Person(Parcel in) {
         Bundle personBundle = in.readBundle(getClass().getClassLoader());
         this.userId = personBundle.getString(ID_KEY);
+        this.username = personBundle.getString(USERNAME_KEY);
         this.name = personBundle.getString(NAME_KEY);
         this.email = personBundle.getString(EMAIL_KEY);
         this.bio = personBundle.getString(BIO_KEY);
@@ -90,6 +103,7 @@ public class Person implements Parcelable {
     public void writeToParcel(Parcel dest, int flags) {
         Bundle personBundle = new Bundle();
         personBundle.putString(ID_KEY, userId);
+        personBundle.putString(USERNAME_KEY, username);
         personBundle.putString(NAME_KEY, name);
         personBundle.putString(EMAIL_KEY, email);
         personBundle.putSerializable(PPURL_KEY, profilePictureURL);
@@ -110,6 +124,14 @@ public class Person implements Parcelable {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getName() {
