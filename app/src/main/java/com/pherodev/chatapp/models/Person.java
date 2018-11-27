@@ -7,6 +7,7 @@ import android.os.Parcelable;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class Person implements Parcelable {
 
@@ -18,6 +19,10 @@ public class Person implements Parcelable {
     public ArrayList<String> conversationIds;
     public Location location;
     public String status;
+    public Date dateOfBirth;
+    public Date dateJoined;
+    public Date dateLastSeen;
+    public String phoneNumber;
 
     // Bundle keys that are just the names of member variables
     private static String ID_KEY = "userId";
@@ -28,6 +33,10 @@ public class Person implements Parcelable {
     private static String CONVERSATIONS_KEY = "conversations";
     private static String STATUS_KEY = "status";
     private static String LOCATION_KEY = "location";
+    private static String DOB_KEY = "dateOfBirth";
+    private static String DJ_KEY = "dateJoined";
+    private static String DLS_KEY = "dateLastSeen";
+    private static String PHONE_KEY = "phoneNumber";
 
 //    private String bio;
 //    private ArrayList<Issue> issues;
@@ -53,6 +62,11 @@ public class Person implements Parcelable {
         this.bio = personBundle.getString(BIO_KEY);
         this.conversationIds = personBundle.getStringArrayList(CONVERSATIONS_KEY);
         this.status = personBundle.getString(STATUS_KEY);
+        this.location = personBundle.getParcelable(LOCATION_KEY);
+        this.dateOfBirth = (Date) personBundle.getSerializable(DOB_KEY);
+        this.dateJoined = (Date) personBundle.getSerializable(DJ_KEY);
+        this.dateLastSeen = (Date) personBundle.getSerializable(DLS_KEY);
+        this.phoneNumber = personBundle.getString(PHONE_KEY);
     }
 
     public static final Creator<Person> CREATOR
@@ -83,6 +97,10 @@ public class Person implements Parcelable {
         personBundle.putStringArrayList(CONVERSATIONS_KEY, conversationIds);
         personBundle.putString(STATUS_KEY, status);
         personBundle.putParcelable(LOCATION_KEY, location);
+        personBundle.putSerializable(DOB_KEY, dateOfBirth);
+        personBundle.putSerializable(DJ_KEY, dateJoined);
+        personBundle.putSerializable(DLS_KEY, dateLastSeen);
+        personBundle.putString(PHONE_KEY, phoneNumber);
         dest.writeBundle(personBundle);
     }
 
@@ -150,5 +168,35 @@ public class Person implements Parcelable {
         this.location = location;
     }
 
+    public Date getDateOfBirth() {
+        return dateOfBirth;
+    }
 
+    public void setDateOfBirth(Date dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
+    public Date getDateJoined() {
+        return dateJoined;
+    }
+
+    public void setDateJoined(Date dateJoined) {
+        this.dateJoined = dateJoined;
+    }
+
+    public Date getDateLastSeen() {
+        return dateLastSeen;
+    }
+
+    public void setDateLastSeen(Date dateLastSeen) {
+        this.dateLastSeen = dateLastSeen;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
 }
