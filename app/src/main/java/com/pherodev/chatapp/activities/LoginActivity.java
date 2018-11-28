@@ -1,6 +1,5 @@
 package com.pherodev.chatapp.activities;
 
-import android.support.annotation.ColorInt;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.Snackbar;
@@ -13,16 +12,19 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.google.android.gms.tasks.OnCanceledListener;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreSettings;
 import com.pherodev.chatapp.R;
 import com.pherodev.chatapp.models.Person;
+import com.pherodev.chatapp.singletons.User;
 
-import java.text.Format;
 import java.util.HashMap;
 
 public class LoginActivity extends AppCompatActivity implements View.OnClickListener {
@@ -30,8 +32,8 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     private final static String TAG = "Login";
 
     // Firebase
-    FirebaseAuth firebaseAuth;
-    FirebaseFirestore firebaseFirestore;
+    private FirebaseAuth firebaseAuth;
+    private FirebaseFirestore firebaseFirestore;
 
     // Views and ViewGroups
     private TextView usernameLabelTextView;
@@ -58,6 +60,10 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         // Firebase
         firebaseAuth = FirebaseAuth.getInstance();
         firebaseFirestore = FirebaseFirestore.getInstance();
+        FirebaseFirestoreSettings settings = new FirebaseFirestoreSettings.Builder()
+                .setTimestampsInSnapshotsEnabled(true)
+                .build();
+        firebaseFirestore.setFirestoreSettings(settings);
 
         // Initialize Views and ViewGroups
         usernameLabelTextView = (TextView) findViewById(R.id.text_view_login_username_label);
@@ -205,13 +211,13 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
             responseConstraintLayout.setVisibility(View.VISIBLE);
             responseConstraintLayout.setBackgroundTintList(getResources().getColorStateList(R.color.color_status_good));
             responseStatusTextView.setText(status);
-            responseDetailsTextView.setText(details);
+            responseDetailsTextView.setText((details == null ? "" : details));
         } else {
             Log.e(TAG, methodName + ":" + status);
             responseConstraintLayout.setVisibility(View.VISIBLE);
             responseConstraintLayout.setBackgroundTintList(getResources().getColorStateList(R.color.color_status_bad));
             responseStatusTextView.setText(status);
-            responseDetailsTextView.setText(details);
+            responseDetailsTextView.setText((details == null ? "" : details));
         }
     }
 
@@ -240,20 +246,36 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         firebaseFirestore.collection("usernames").document(usernameOrEmail).get().addOnCompleteListener(fetchEmailListener);
     }
 
-    // TODO: Populate singleton instance of logged-in user
     private void firebaseEmailLogin(String email, String password) {
         Log.d(TAG, "firebaseEmailLogin:" + email + " " + password);
         OnCompleteListener<AuthResult> passwordLoginListener = new OnCompleteListener<AuthResult>() {
             @Override
             public void onComplete(@NonNull Task<AuthResult> task) {
                 if (task.isSuccessful()) {
+                    // Worst case the displayName is empty and the user just sees 'Welcome'
                     updateResponseUI(true, "firebaseEmailLogin", "Login success.", getText(R.string.login_activity_status_welcome) + " " + task.getResult().getUser().getDisplayName());
+                    populateUserPersonSingleton(task.getResult().getUser().getUid());
                 } else {
                     updateResponseUI(false, "firebaseEmailLogin", "Login failed.", task.getException().getMessage());
                 }
             }
         };
-        firebaseAuth.signInWithEmailAndPassword(email, password).addOnCompleteListener(passwordLoginListener);
+        OnFailureListener passwordFailureListener = new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                updateResponseUI(false, "firebaseEmailLogin", "Login failed.", e.getMessage());
+            }
+        };
+        OnCanceledListener passwordCancelListener = new OnCanceledListener() {
+            @Override
+            public void onCanceled() {
+                updateResponseUI(false, "firebaseEmailLogin", "Login failed.", "Canceled.");
+            }
+        };
+        firebaseAuth.signInWithEmailAndPassword(email, password)
+                .addOnCompleteListener(passwordLoginListener)
+                .addOnFailureListener(passwordFailureListener)
+                .addOnCanceledListener(passwordCancelListener);
     }
 
     private void firebaseRegisterUser(final String username, final String email, final String first, final String last, final String password) {
@@ -276,7 +298,6 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         firebaseFirestore.collection("usernames").document(username).get().addOnCompleteListener(registerListener);
     }
 
-    // TODO: Push new user to Firestore collectionS and populate singleton instance of logged-in user
     private void firebaseRegisterUnique(final String username, final String email, final String first, final String last, final String password) {
         Log.d(TAG, email + " " + password);
         OnCompleteListener<AuthResult> registerListener = new OnCompleteListener<AuthResult>() {
@@ -310,7 +331,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
             public void onComplete(@NonNull Task<Void> task) {
                 if (task.isSuccessful()) {
                     updateResponseUI(true, "addPerson", "Successfully registered Person.", registeredUser.getUsername());
-                    populateCurrentPerson(registeredUser.getUserId());
+                    populateUserPersonSingleton(registeredUser);
                 } else {
                     updateResponseUI(false, "addPerson", "Failed to add Person... removing the username mapping.", task.getException().getMessage());
                     firebaseFirestore.collection("usernames").document(registeredUser.getUsername()).delete().addOnCompleteListener(deletePersonListener);
@@ -339,8 +360,23 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                 .addOnCompleteListener(addUsernameMappingListener);
     }
 
-    // TODO: Method to populate singleton instance of logged-in user
-    private void populateCurrentPerson(String uid) {
+    private void populateUserPersonSingleton(String uid) {
+        OnCompleteListener<DocumentSnapshot> onCompleteListener = new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                if (task.isSuccessful()) {
+                    Person userPerson = task.getResult().toObject(Person.class);
+                    updateResponseUI(true, "populateUserPersonSingleton", "Successfully fetched user.", userPerson.getUsername());
+                    populateUserPersonSingleton(userPerson);
+                } else {
+                    updateResponseUI(false, "populateUserPersonSingleton", "Failed fetching user.", task.getException().getMessage());
+                }
+            }
+        };
+        firebaseFirestore.collection("users").document(uid).get().addOnCompleteListener(onCompleteListener);
+    }
 
+    private void populateUserPersonSingleton(Person userPerson) {
+        User.setInstance(userPerson);
     }
 }
